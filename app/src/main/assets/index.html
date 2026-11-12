@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Meia Maratona SP 2027</title>
+<style>
+:root{
+  --bg:#EEF1EC; --card:#FFFFFF; --ink:#18212B; --muted:#5D6873; --line:#D5DBD3;
+  --accent:#1F4FD1; --accentSoft:#DDE6FB; --onAccent:#FFFFFF; --done:#2A7F4F; --doneSoft:#DCEFE3; --race:#F2C230; --warn:#C2412D;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#11161B; --card:#1A2128; --ink:#E8ECEF; --muted:#9AA5AF; --line:#2C353E;
+    --accent:#7FA2FF; --accentSoft:#1E2C4D; --onAccent:#0F1520; --done:#5CC88A; --doneSoft:#173526; --warn:#FF8A73;
+    color-scheme:dark;
+  }
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.45}
+.wrap{max-width:640px;margin:0 auto;padding:20px 16px 48px}
+.cond{font-family:"Roboto Condensed","Arial Narrow",system-ui,sans-serif}
+.hero{padding:8px 0 16px}
+.days{font-size:72px;font-weight:800;line-height:.9;letter-spacing:-1px}
+.daysLabel{font-size:18px;color:var(--muted);margin-top:4px}
+.stats{display:flex;gap:10px;margin-top:16px}
+.stat{flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.stat .v{font-size:26px;font-weight:800;line-height:1.1}
+.stat .l{font-size:13px;color:var(--muted)}
+.trackBar{position:relative;height:12px;border-radius:6px;background:var(--line);overflow:hidden;margin-top:14px}
+.trackFill{position:absolute;inset:0 auto 0 0;background:var(--done);width:0;transition:width .4s}
+.sync{font-size:13px;color:var(--muted);margin-top:8px}
+nav{position:sticky;top:0;z-index:5;background:var(--bg);display:flex;gap:6px;padding:10px 0;border-bottom:1px solid var(--line);margin-bottom:16px}
+nav button{flex:1;font:600 15px system-ui,sans-serif;padding:10px 6px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+nav button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--onAccent)}
+button,input,textarea{font-family:inherit}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.panel[hidden]{display:none}
+.tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px}
+.tools label{font-size:14px;color:var(--muted)}
+input[type=date],input[type=text],input[type=number],textarea{font-size:16px;padding:9px 10px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);width:100%}
+.tools input[type=date]{width:auto}
+.btn{font:600 14px system-ui,sans-serif;padding:9px 12px;border-radius:8px;border:1px solid var(--accent);background:transparent;color:var(--accent)}
+.btn.solid{background:var(--accent);color:var(--onAccent)}
+.btn.danger{border-color:var(--warn);color:var(--warn)}
+.week{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:14px;overflow:hidden}
+.week.current{border-color:var(--accent);box-shadow:0 0 0 2px var(--accentSoft)}
+.weekHead{display:flex;justify-content:space-between;align-items:baseline;padding:12px 14px 8px}
+.weekHead h2{margin:0;font-size:24px;font-weight:800}
+.phase,.count{font-size:14px;color:var(--muted)}
+.tag{display:inline-block;font-size:12px;font-weight:600;background:var(--accentSoft);color:var(--accent);padding:2px 8px;border-radius:999px;margin-left:8px;vertical-align:middle;font-family:system-ui,sans-serif}
+.item{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-top:1px solid var(--line)}
+.item input[type=checkbox]{appearance:none;-webkit-appearance:none;flex:none;width:28px;height:28px;margin:0;border:2px solid var(--muted);border-radius:7px;background:var(--card);display:grid;place-items:center}
+.item input[type=checkbox]:checked{background:var(--done);border-color:var(--done)}
+.item input[type=checkbox]:checked::after{content:"";width:7px;height:13px;border:solid #fff;border-width:0 3px 3px 0;transform:rotate(45deg) translate(-1px,-1px)}
+.item .txt{flex:1;min-width:0;text-align:left;background:none;border:0;padding:0;color:inherit;font:inherit}
+.item .date{font-size:13px;color:var(--muted);text-transform:capitalize}
+.item .what{font-size:16px}
+.item .result{font-size:14px;color:var(--done);font-weight:600;margin-top:2px}
+.item .note{font-size:13px;color:var(--muted);margin-top:2px;white-space:pre-wrap}
+.item .changed{font-size:12px;color:var(--accent);font-weight:600;margin-left:6px}
+.item .edit{flex:none;font-size:13px;color:var(--accent);font-weight:600;align-self:center}
+.item.done{background:var(--doneSoft)}
+.item.race{background:color-mix(in srgb,var(--race) 22%,var(--card))}
+.item.race .what{font-weight:700}
+.item.past:not(.done) .date{color:var(--warn)}
+.addBtn{display:block;width:100%;padding:12px 14px;border:0;border-top:1px dashed var(--line);background:none;color:var(--accent);font-weight:600;text-align:left;font-size:14px}
+.prepNote{font-size:14px;color:var(--muted);margin-top:2px}
+.guide{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.guideRow{padding:14px;border-top:1px solid var(--line)}
+.guideRow:first-child{border-top:0}
+.guideRow h3{margin:0 0 4px;font-size:16px;font-weight:600}
+.guideRow p{margin:0}
+.intro{color:var(--muted);font-size:15px;margin:0 0 14px}
+dialog{border:0;padding:0;width:100%;max-width:640px;margin:auto auto 0;border-radius:18px 18px 0 0;background:var(--card);color:var(--ink);max-height:92vh}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+.sheet{padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));overflow:auto;max-height:92vh}
+.sheet h3{margin:0 0 4px;font-size:20px}
+.rec{background:var(--accentSoft);border-radius:10px;padding:10px 12px;font-size:14px;margin:8px 0 14px}
+.rec b{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--accent);margin-bottom:2px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:14px;color:var(--muted);margin-bottom:4px}
+.row2{display:flex;gap:10px}
+.row2 .field{flex:1}
+.pace{font-size:14px;color:var(--done);font-weight:600;min-height:20px;margin:-4px 0 10px}
+.check{display:flex;align-items:center;gap:10px;margin:4px 0 16px;font-size:16px}
+.check input{width:22px;height:22px}
+.actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+.actions .left{margin-right:auto;display:flex;gap:8px}
+.backup{margin-top:20px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+.backup h3{margin:0 0 6px;font-size:16px}
+.backup p{margin:0 0 10px;font-size:14px;color:var(--muted)}
+.backup textarea{min-height:90px;font-size:12px;margin-bottom:10px}
+.backup .btns{display:flex;gap:8px;flex-wrap:wrap}
+@media (prefers-reduced-motion: reduce){.trackFill{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div class="days cond" id="days">0</div>
+    <div class="daysLabel" id="daysLabel">dias até a prova</div>
+    <div class="stats">
+      <div class="stat"><div class="v cond" id="sDone">0</div><div class="l">treinos feitos</div></div>
+      <div class="stat"><div class="v cond" id="sKm">0</div><div class="l">km corridos</div></div>
+      <div class="stat"><div class="v cond" id="sLong">0</div><div class="l">maior corrida (km)</div></div>
+    </div>
+    <div class="trackBar" aria-hidden="true"><div class="trackFill" id="fill"></div></div>
+    <div class="sync" id="sync">Salvo neste celular</div>
+  </header>
+
+  <nav role="tablist">
+    <button role="tab" aria-selected="true" data-tab="cal">Calendário</button>
+    <button role="tab" aria-selected="false" data-tab="prep">Preparação</button>
+    <button role="tab" aria-selected="false" data-tab="guia">Guia</button>
+  </nav>
+
+  <section class="panel" id="cal">
+    <p class="intro">Toque no treino para alterar data, distância, tempo ou anotação.</p>
+    <div class="tools">
+      <label for="race">Data da prova</label>
+      <input type="date" id="race">
+      <button class="btn" id="goNow">Ir para esta semana</button>
+    </div>
+    <div id="weeks"></div>
+  </section>
+
+  <section class="panel" id="prep" hidden>
+    <p class="intro">Consultas, exames e tarefas para chegar pronto no dia.</p>
+    <div class="week" id="prepList"></div>
+  </section>
+
+  <section class="panel" id="guia" hidden>
+    <div class="guide" id="guideList"></div>
+    <div class="backup">
+      <h3>Cópia de segurança</h3>
+      <p>Se for trocar de celular ou reinstalar o app, copie o código abaixo e guarde. Depois é só colar e tocar em Restaurar.</p>
+      <textarea id="backupText" aria-label="Código da cópia de segurança"></textarea>
+      <div class="btns">
+        <button class="btn" id="bkGen">Gerar código</button>
+        <button class="btn" id="bkCopy">Copiar</button>
+        <button class="btn danger" id="bkLoad">Restaurar</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<dialog id="dlg">
+  <form class="sheet" method="dialog" id="form">
+    <h3 id="dTitle">Editar treino</h3>
+    <div class="rec" id="dRec"><b>Recomendado</b><span id="dRecText"></span></div>
+    <div class="field">
+      <label for="fText">Treino</label>
+      <input type="text" id="fText">
+    </div>
+    <div class="field">
+      <label for="fDate">Data</label>
+      <input type="date" id="fDate">
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label for="fKm">Distância feita (km)</label>
+        <input type="text" id="fKm" inputmode="decimal" placeholder="Ex: 6,5">
+      </div>
+      <div class="field">
+        <label for="fTime">Tempo</label>
+        <input type="text" id="fTime" inputmode="numeric" placeholder="Ex: 42:30">
+      </div>
+    </div>
+    <div class="pace" id="fPace"></div>
+    <div class="field">
+      <label for="fNote">Anotação</label>
+      <textarea id="fNote" rows="2" placeholder="Como foi, dor, clima"></textarea>
+    </div>
+    <label class="check"><input type="checkbox" id="fDone"> Treino feito</label>
+    <div class="actions">
+      <div class="left">
+        <button type="button" class="btn" id="dReset">Voltar ao recomendado</button>
+        <button type="button" class="btn danger" id="dDelete">Excluir</button>
+      </div>
+      <button type="button" class="btn" id="dCancel">Cancelar</button>
+      <button type="button" class="btn solid" id="dSave">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const PLAN = [{"o":138,"t":"Corrida leve 3 km","w":1,"f":"1. Base"},{"o":137,"t":"Fortalecimento 20 min","w":1,"f":"1. Base"},{"o":135,"t":"Fortalecimento 20 min","w":1,"f":"1. Base"},{"o":134,"t":"Longão 6 km em ritmo de conversa","w":1,"f":"1. Base"},{"o":131,"t":"Corrida leve 3 km","w":2,"f":"1. Base"},{"o":130,"t":"Fortalecimento 20 min","w":2,"f":"1. Base"},{"o":128,"t":"Fortalecimento 20 min","w":2,"f":"1. Base"},{"o":127,"t":"Longão 7 km em ritmo de conversa","w":2,"f":"1. Base"},{"o":124,"t":"Corrida leve 4 km","w":3,"f":"1. Base"},{"o":123,"t":"Fortalecimento 20 min","w":3,"f":"1. Base"},{"o":121,"t":"Fortalecimento 20 min","w":3,"f":"1. Base"},{"o":120,"t":"Longão 7 km em ritmo de conversa","w":3,"f":"1. Base"},{"o":117,"t":"Corrida leve 3 km (semana leve)","w":4,"f":"1. Base"},{"o":116,"t":"Fortalecimento 20 min","w":4,"f":"1. Base"},{"o":114,"t":"Fortalecimento 20 min","w":4,"f":"1. Base"},{"o":113,"t":"Longão 5 km em ritmo de conversa (semana leve)","w":4,"f":"1. Base"},{"o":110,"t":"Corrida leve 4 km","w":5,"f":"2. Construção"},{"o":109,"t":"Fortalecimento 20 min","w":5,"f":"2. Construção"},{"o":107,"t":"Fortalecimento 20 min","w":5,"f":"2. Construção"},{"o":106,"t":"Longão 8 km em ritmo de conversa","w":5,"f":"2. Construção"},{"o":103,"t":"Corrida leve 4 km","w":6,"f":"2. Construção"},{"o":102,"t":"Fortalecimento 20 min","w":6,"f":"2. Construção"},{"o":100,"t":"Fortalecimento 20 min","w":6,"f":"2. Construção"},{"o":99,"t":"Longão 9 km em ritmo de conversa","w":6,"f":"2. Construção"},{"o":96,"t":"Corrida leve 5 km","w":7,"f":"2. Construção"},{"o":95,"t":"Fortalecimento 20 min","w":7,"f":"2. Construção"},{"o":94,"t":"Corrida extra opcional 3 a 4 km leve","w":7,"f":"2. Construção"},{"o":93,"t":"Fortalecimento 20 min","w":7,"f":"2. Construção"},{"o":92,"t":"Longão 10 km em ritmo de conversa","w":7,"f":"2. Construção"},{"o":89,"t":"Corrida leve 4 km (semana leve)","w":8,"f":"2. Construção"},{"o":88,"t":"Fortalecimento 20 min","w":8,"f":"2. Construção"},{"o":87,"t":"Corrida extra opcional 3 a 4 km leve","w":8,"f":"2. Construção"},{"o":86,"t":"Fortalecimento 20 min","w":8,"f":"2. Construção"},{"o":85,"t":"Longão 7 km em ritmo de conversa (semana leve)","w":8,"f":"2. Construção"},{"o":82,"t":"Corrida leve 5 km","w":9,"f":"2. Construção"},{"o":81,"t":"Fortalecimento 20 min","w":9,"f":"2. Construção"},{"o":80,"t":"Corrida extra opcional 3 a 4 km leve","w":9,"f":"2. Construção"},{"o":79,"t":"Fortalecimento 20 min","w":9,"f":"2. Construção"},{"o":78,"t":"Longão 11 km em ritmo de conversa","w":9,"f":"2. Construção"},{"o":75,"t":"Corrida leve 5 km","w":10,"f":"2. Construção"},{"o":74,"t":"Fortalecimento 20 min","w":10,"f":"2. Construção"},{"o":73,"t":"Corrida extra opcional 3 a 4 km leve","w":10,"f":"2. Construção"},{"o":72,"t":"Fortalecimento 20 min","w":10,"f":"2. Construção"},{"o":71,"t":"Longão 12 km em ritmo de conversa","w":10,"f":"2. Construção"},{"o":68,"t":"Corrida leve 5 km","w":11,"f":"3. Volume"},{"o":67,"t":"Fortalecimento 20 min","w":11,"f":"3. Volume"},{"o":66,"t":"Corrida 6 a 7 km com 4 a 6 trechos de 1 min mais rápido","w":11,"f":"3. Volume"},{"o":65,"t":"Fortalecimento 20 min","w":11,"f":"3. Volume"},{"o":64,"t":"Longão 13 km em ritmo de conversa","w":11,"f":"3. Volume"},{"o":61,"t":"Corrida leve 4 km (semana leve)","w":12,"f":"3. Volume"},{"o":60,"t":"Fortalecimento 20 min","w":12,"f":"3. Volume"},{"o":59,"t":"Corrida leve 5 km","w":12,"f":"3. Volume"},{"o":58,"t":"Fortalecimento 20 min","w":12,"f":"3. Volume"},{"o":57,"t":"Longão 10 km em ritmo de conversa (semana leve)","w":12,"f":"3. Volume"},{"o":54,"t":"Corrida leve 5 km","w":13,"f":"3. Volume"},{"o":53,"t":"Fortalecimento 20 min","w":13,"f":"3. Volume"},{"o":52,"t":"Corrida 6 a 7 km com 4 a 6 trechos de 1 min mais rápido","w":13,"f":"3. Volume"},{"o":51,"t":"Fortalecimento 20 min","w":13,"f":"3. Volume"},{"o":50,"t":"Longão 14 km em ritmo de conversa","w":13,"f":"3. Volume"},{"o":47,"t":"Corrida leve 5 km","w":14,"f":"3. Volume"},{"o":46,"t":"Fortalecimento 20 min","w":14,"f":"3. Volume"},{"o":45,"t":"Corrida 6 a 7 km com 4 a 6 trechos de 1 min mais rápido","w":14,"f":"3. Volume"},{"o":44,"t":"Fortalecimento 20 min","w":14,"f":"3. Volume"},{"o":43,"t":"Longão 15 km em ritmo de conversa","w":14,"f":"3. Volume"},{"o":40,"t":"Corrida leve 5 km","w":15,"f":"3. Volume"},{"o":39,"t":"Fortalecimento 20 min","w":15,"f":"3. Volume"},{"o":38,"t":"Corrida 6 a 7 km com 4 a 6 trechos de 1 min mais rápido","w":15,"f":"3. Volume"},{"o":37,"t":"Fortalecimento 20 min","w":15,"f":"3. Volume"},{"o":36,"t":"Longão 16 km em ritmo de conversa","w":15,"f":"3. Volume"},{"o":33,"t":"Corrida leve 4 km (semana leve)","w":16,"f":"3. Volume"},{"o":32,"t":"Fortalecimento 20 min","w":16,"f":"3. Volume"},{"o":31,"t":"Corrida leve 5 km","w":16,"f":"3. Volume"},{"o":30,"t":"Fortalecimento 20 min","w":16,"f":"3. Volume"},{"o":29,"t":"Longão 12 km em ritmo de conversa (semana leve)","w":16,"f":"3. Volume"},{"o":26,"t":"Corrida leve 5 km","w":17,"f":"3. Volume"},{"o":25,"t":"Fortalecimento 20 min","w":17,"f":"3. Volume"},{"o":24,"t":"Corrida 6 a 7 km com 4 a 6 trechos de 1 min mais rápido","w":17,"f":"3. Volume"},{"o":23,"t":"Fortalecimento 20 min","w":17,"f":"3. Volume"},{"o":22,"t":"Longão 17 km em ritmo de conversa","w":17,"f":"3. Volume"},{"o":19,"t":"Corrida leve 5 km","w":18,"f":"4. Pico"},{"o":18,"t":"Fortalecimento 20 min","w":18,"f":"4. Pico"},{"o":17,"t":"Corrida leve 5 a 6 km","w":18,"f":"4. Pico"},{"o":15,"t":"Longão 18 km em ritmo de conversa","w":18,"f":"4. Pico"},{"o":12,"t":"Corrida leve 5 km","w":19,"f":"5. Polimento"},{"o":11,"t":"Fortalecimento leve 15 min","w":19,"f":"5. Polimento"},{"o":10,"t":"Corrida leve 5 a 6 km","w":19,"f":"5. Polimento"},{"o":8,"t":"Longão (início do polimento) 12 km em ritmo de conversa","w":19,"f":"5. Polimento"},{"o":5,"t":"Corrida leve 5 km","w":20,"f":"5. Polimento"},{"o":3,"t":"Corrida leve 3 km com 4 trechos curtos um pouco mais rápidos","w":20,"f":"5. Polimento"},{"o":0,"t":"PROVA: Meia Maratona 21 km","w":20,"f":"5. Polimento"}];
+const PREP = [
+  ["Consulta com ortopedista de coluna","Contar que vai treinar para a meia maratona e perguntar sobre cuidados e exercícios de fortalecimento seguros."],
+  ["Consulta com cardiologista ou médico do esporte","Pedir os exames abaixo e o atestado, se a prova pedir."],
+  ["Eletrocardiograma",""],
+  ["Teste ergométrico ou ergoespirométrico","O ergoespirométrico mostra suas zonas ideais de batimento cardíaco."],
+  ["Exames de sangue","Hemograma, ferritina, vitamina D, glicose, colesterol, tireoide e função dos rins."],
+  ["Consulta com nutricionista esportivo",""],
+  ["Avaliação da pisada e tênis novo","Comprar até janeiro para amaciar antes dos longões maiores."],
+  ["Confirmar data e horário da prova no site oficial","Se for outra data, mude a data da prova no Calendário."],
+  ["Combinar dias fixos de treino","Ou buscar uma assessoria ou alguém para correr junto."],
+  ["Testar gel ou alimento de corrida num longão","Nos longões acima de 1h15."],
+  ["Testar a roupa e o tênis da prova num longão",""],
+  ["Retirar o kit da prova",""]
+];
+const GUIDE = [
+  ["Ritmo","Quase todos os treinos em ritmo de conversa. Se não consegue falar frases inteiras, diminua."],
+  ["Progressão","Nunca aumente o longão mais que 1 ou 2 km de uma vez. As semanas leves servem para o corpo se recuperar."],
+  ["Caminhar é permitido","Alternar corrida e caminhada no começo é normal e não atrapalha a evolução."],
+  ["Treino perdido","Não tente compensar. Siga a partir da semana atual. Se perder mais de uma semana, repita a semana anterior."],
+  ["Correu em outro dia","Toque no treino e mude a data. Evite fazer dois treinos de corrida em dias seguidos no começo."],
+  ["Dor","Dor que piora correndo é sinal para parar. Dor na coluna: fale com o ortopedista antes de continuar."],
+  ["Fortalecimento","Pernas, glúteo e abdômen, 2 vezes por semana. Confirme com o ortopedista ou fisioterapeuta quais exercícios são seguros para você."],
+  ["Antes do longão","Refeição com carboidrato (pão, arroz, banana) 1 a 2 horas antes."],
+  ["Dia a dia","Proteína em todas as refeições. Água ao longo do dia, não só no treino."],
+  ["Longões acima de 1h15","Teste gel de carboidrato ou outro alimento de corrida. Nunca teste nada novo no dia da prova."],
+  ["Contra a preguiça","Dias fixos no calendário, roupa separada na noite anterior, correr com alguém ou com assessoria."],
+  ["Feriados","No Natal e no Ano Novo, se não der para fazer tudo, faça pelo menos o longão da semana."],
+  ["Se a prova for em outra data","Mude a data da prova no topo do Calendário e as datas recomendadas se ajustam. Se sobrarem semanas antes da Semana 1, repita a Semana 1 nelas."]
+];
+const DEFAULT_RACE = "2027-04-04";
+const LS_KEY = "mm-sp-2027";
+let state = { race: DEFAULT_RACE, done: {}, edits: {}, extras: [], updatedAt: 0 };
+
+/* ---------- datas ---------- */
+function parseDate(s){ const [y,m,d] = s.split("-").map(Number); return new Date(y, m-1, d); }
+function toISO(d){ return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"); }
+function addDays(d,n){ const r = new Date(d); r.setDate(r.getDate()+n); return r; }
+function today(){ const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); }
+const fmt = new Intl.DateTimeFormat("pt-BR",{weekday:"short",day:"2-digit",month:"2-digit"});
+function fmtDate(d){ return fmt.format(d).replace(".", ""); }
+
+/* ---------- tempo e ritmo ---------- */
+function parseTime(s){
+  if (!s) return null;
+  const parts = String(s).trim().replace(/[^\d:]/g,"").split(":").filter(x => x !== "").map(Number);
+  if (!parts.length || parts.some(isNaN)) return null;
+  let sec = 0;
+  if (parts.length === 1) sec = parts[0]*60;
+  else if (parts.length === 2) sec = parts[0]*60 + parts[1];
+  else sec = parts[0]*3600 + parts[1]*60 + parts[2];
+  return sec > 0 ? sec : null;
+}
+function fmtDur(sec){
+  sec = Math.round(sec);
+  const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = sec%60;
+  return (h ? h + ":" + String(m).padStart(2,"0") : m) + ":" + String(s).padStart(2,"0");
+}
+function fmtKm(n){ return (Math.round(n*100)/100).toLocaleString("pt-BR"); }
+function paceText(km, time){
+  const sec = parseTime(time);
+  if (!km || !sec) return "";
+  return fmtDur(sec/km) + " por km";
+}
+function isRun(text){ return !/fortalecimento/i.test(text); }
+
+/* ---------- armazenamento ---------- */
+function loadLocal(){
+  try {
+    const v = localStorage.getItem(LS_KEY);
+    if (v) {
+      const p = JSON.parse(v);
+      if (p && typeof p === "object") state = {
+        race: p.race || DEFAULT_RACE, done: p.done || {}, edits: p.edits || {}, extras: Array.isArray(p.extras) ? p.extras : [], updatedAt: p.updatedAt || 0
+      };
+    }
+  } catch(e){}
+}
+function save(){
+  state.updatedAt = Date.now();
+  let ok = true;
+  try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch(e){ ok = false; }
+  document.getElementById("sync").textContent = ok ? "Salvo neste celular" : "Não consegui salvar. Gere uma cópia de segurança.";
+  render();
+}
+
+/* ---------- itens ---------- */
+function planKey(i){ return "t" + PLAN[i].w + "-" + PLAN[i].o; }
+function allItems(){
+  const race = parseDate(state.race);
+  const list = PLAN.map((p,i) => {
+    const k = planKey(i), e = state.edits[k] || {};
+    const recDate = addDays(race, -p.o);
+    return {
+      key: k, w: p.w, f: p.f, isPlan: true, isRace: p.o === 0,
+      recText: p.t, recDate,
+      text: e.text || p.t, date: e.date ? parseDate(e.date) : recDate,
+      km: e.km || null, time: e.time || "", note: e.note || "",
+      changed: !!(e.text || e.date)
+    };
+  });
+  state.extras.forEach(x => {
+    list.push({
+      key: x.id, w: x.w, isPlan: false, isRace: false, recText: "", recDate: null,
+      text: x.text || "Treino extra", date: x.date ? parseDate(x.date) : today(),
+      km: x.km || null, time: x.time || "", note: x.note || "", changed: false
+    });
+  });
+  return list;
+}
+function weekBounds(w){
+  const race = parseDate(state.race);
+  const sunday = addDays(race, -7*(20-w));
+  return { monday: addDays(sunday, -6), sunday };
+}
+
+/* ---------- tela ---------- */
+function render(){
+  const race = parseDate(state.race);
+  document.getElementById("race").value = state.race;
+  const t = today();
+  const days = Math.round((race - t) / 86400000);
+  document.getElementById("days").textContent = Math.max(days,0);
+  document.getElementById("daysLabel").textContent = days > 1 ? "dias até a prova" : days === 1 ? "dia até a prova" : days === 0 ? "É hoje. Boa prova!" : "A prova já passou";
+
+  const items = allItems();
+  const doneItems = items.filter(it => state.done[it.key]);
+  const totalKm = doneItems.reduce((s,it) => s + (it.km || 0), 0);
+  const longest = doneItems.reduce((m,it) => Math.max(m, it.km || 0), 0);
+  document.getElementById("sDone").textContent = doneItems.length + "/" + items.length;
+  document.getElementById("sKm").textContent = fmtKm(totalKm);
+  document.getElementById("sLong").textContent = fmtKm(longest);
+  document.getElementById("fill").style.width = (items.length ? doneItems.length/items.length*100 : 0) + "%";
+
+  const weeksEl = document.getElementById("weeks");
+  weeksEl.innerHTML = "";
+  let currentWeek = null;
+  for (let w = 1; w <= 20; w++) {
+    const wi = items.filter(it => it.w === w).sort((a,b) => a.date - b.date || (a.isPlan ? 0 : 1) - (b.isPlan ? 0 : 1));
+    const { monday, sunday } = weekBounds(w);
+    const isCurrent = t >= monday && t <= sunday;
+    if (isCurrent) currentWeek = w;
+    const light = PLAN.some(p => p.w === w && p.t.includes("semana leve"));
+    const wd = wi.filter(it => state.done[it.key]).length;
+    const wkm = wi.filter(it => state.done[it.key]).reduce((s,it) => s + (it.km || 0), 0);
+
+    const sec = document.createElement("div");
+    sec.className = "week" + (isCurrent ? " current" : "");
+    sec.id = "w" + w;
+    const head = document.createElement("div");
+    head.className = "weekHead";
+    const left = document.createElement("div");
+    const h2 = document.createElement("h2"); h2.className = "cond"; h2.textContent = "Semana " + w;
+    if (isCurrent || light) { const tg = document.createElement("span"); tg.className = "tag"; tg.textContent = isCurrent ? "Agora" : "Leve"; h2.appendChild(tg); }
+    const ph = document.createElement("span"); ph.className = "phase"; ph.textContent = PLAN.find(p => p.w === w).f.replace(/^\d\.\s*/,"");
+    left.append(h2, ph);
+    const cnt = document.createElement("span"); cnt.className = "count";
+    cnt.textContent = wd + "/" + wi.length + (wkm ? ", " + fmtKm(wkm) + " km" : "");
+    head.append(left, cnt);
+    sec.appendChild(head);
+
+    wi.forEach(it => sec.appendChild(itemRow(it, t)));
+
+    const add = document.createElement("button");
+    add.className = "addBtn"; add.textContent = "+ Adicionar treino nesta semana";
+    add.addEventListener("click", () => openEditor(null, w));
+    sec.appendChild(add);
+    weeksEl.appendChild(sec);
+  }
+  const goNow = document.getElementById("goNow");
+  goNow.hidden = !currentWeek;
+  goNow.onclick = () => { const el = document.getElementById("w" + currentWeek); if (el) el.scrollIntoView({behavior:"smooth"}); };
+
+  renderPrep();
+}
+
+function itemRow(it, t){
+  const done = !!state.done[it.key];
+  const row = document.createElement("div");
+  row.className = "item" + (done ? " done" : "") + (it.isRace ? " race" : "") + (it.date < t ? " past" : "");
+  const cb = document.createElement("input");
+  cb.type = "checkbox"; cb.checked = done; cb.setAttribute("aria-label", "Feito: " + it.text);
+  cb.addEventListener("change", () => { if (cb.checked) state.done[it.key] = true; else delete state.done[it.key]; save(); });
+
+  const body = document.createElement("button");
+  body.type = "button"; body.className = "txt";
+  const dt = document.createElement("div"); dt.className = "date"; dt.textContent = fmtDate(it.date);
+  if (it.changed) { const c = document.createElement("span"); c.className = "changed"; c.textContent = "alterado"; dt.appendChild(c); }
+  if (!it.isPlan) { const c = document.createElement("span"); c.className = "changed"; c.textContent = "extra"; dt.appendChild(c); }
+  const wh = document.createElement("div"); wh.className = "what"; wh.textContent = it.text.replace(" (semana leve)","");
+  body.append(dt, wh);
+  if (it.km || it.time) {
+    const r = document.createElement("div"); r.className = "result";
+    const parts = [];
+    if (it.km) parts.push(fmtKm(it.km) + " km");
+    if (parseTime(it.time)) parts.push("em " + fmtDur(parseTime(it.time)));
+    const pc = paceText(it.km, it.time);
+    r.textContent = parts.join(" ") + (pc ? " (" + pc + ")" : "");
+    body.appendChild(r);
+  }
+  if (it.note) { const n = document.createElement("div"); n.className = "note"; n.textContent = it.note; body.appendChild(n); }
+  body.addEventListener("click", () => openEditor(it));
+
+  const ed = document.createElement("span"); ed.className = "edit"; ed.textContent = "Editar"; ed.setAttribute("aria-hidden","true");
+  ed.addEventListener("click", () => openEditor(it));
+  row.append(cb, body, ed);
+  return row;
+}
+
+function renderPrep(){
+  const prepEl = document.getElementById("prepList");
+  prepEl.innerHTML = "";
+  PREP.forEach((p,i) => {
+    const k = "p" + i;
+    const done = !!state.done[k];
+    const lab = document.createElement("label");
+    lab.className = "item" + (done ? " done" : "");
+    const cb = document.createElement("input");
+    cb.type = "checkbox"; cb.checked = done; cb.setAttribute("aria-label", p[0]);
+    cb.addEventListener("change", () => { if (cb.checked) state.done[k] = true; else delete state.done[k]; save(); });
+    const txt = document.createElement("div"); txt.className = "txt";
+    const wh = document.createElement("div"); wh.className = "what"; wh.textContent = p[0];
+    txt.appendChild(wh);
+    if (p[1]) { const n = document.createElement("div"); n.className = "prepNote"; n.textContent = p[1]; txt.appendChild(n); }
+    lab.append(cb, txt);
+    prepEl.appendChild(lab);
+  });
+}
+
+function buildGuide(){
+  const g = document.getElementById("guideList");
+  GUIDE.forEach(([h,p]) => {
+    const row = document.createElement("div"); row.className = "guideRow";
+    const h3 = document.createElement("h3"); h3.textContent = h;
+    const pp = document.createElement("p"); pp.textContent = p;
+    row.append(h3, pp); g.appendChild(row);
+  });
+}
+
+/* ---------- editor ---------- */
+const dlg = document.getElementById("dlg");
+const f = id => document.getElementById(id);
+let editing = null;
+
+function openEditor(it, week){
+  if (it) {
+    editing = { key: it.key, isPlan: it.isPlan, w: it.w };
+    f("dTitle").textContent = it.isRace ? "A prova" : it.isPlan ? "Editar treino" : "Treino extra";
+    f("dRec").hidden = !it.isPlan;
+    if (it.isPlan) f("dRecText").textContent = it.recText.replace(" (semana leve)","") + ", " + fmtDate(it.recDate);
+    f("fText").value = it.text.replace(" (semana leve)","");
+    f("fDate").value = toISO(it.date);
+    f("fKm").value = it.km != null ? String(it.km).replace(".", ",") : "";
+    f("fTime").value = it.time || "";
+    f("fNote").value = it.note || "";
+    f("fDone").checked = !!state.done[it.key];
+    f("dReset").hidden = !it.isPlan;
+    f("dDelete").hidden = it.isPlan;
+  } else {
+    editing = { key: null, isPlan: false, w: week };
+    const { monday, sunday } = weekBounds(week);
+    const t = today();
+    f("dTitle").textContent = "Novo treino na semana " + week;
+    f("dRec").hidden = true;
+    f("fText").value = "Corrida";
+    f("fDate").value = toISO(t >= monday && t <= sunday ? t : monday);
+    f("fKm").value = ""; f("fTime").value = ""; f("fNote").value = "";
+    f("fDone").checked = false;
+    f("dReset").hidden = true; f("dDelete").hidden = true;
+  }
+  updatePace();
+  if (typeof dlg.showModal === "function") dlg.showModal(); else dlg.setAttribute("open","");
+}
+function closeEditor(){ if (typeof dlg.close === "function") dlg.close(); else dlg.removeAttribute("open"); editing = null; }
+function readKm(){
+  const raw = String(f("fKm").value).replace(",", ".").trim();
+  const n = parseFloat(raw);
+  return isNaN(n) || n <= 0 ? null : Math.round(n*100)/100;
+}
+function updatePace(){ f("fPace").textContent = paceText(readKm(), f("fTime").value) ? "Ritmo: " + paceText(readKm(), f("fTime").value) : ""; }
+f("fKm").addEventListener("input", () => { if (readKm()) f("fDone").checked = true; updatePace(); });
+f("fTime").addEventListener("input", updatePace);
+
+f("dSave").addEventListener("click", () => {
+  if (!editing) return;
+  const text = f("fText").value.trim();
+  const date = f("fDate").value;
+  const km = readKm();
+  const time = parseTime(f("fTime").value) ? f("fTime").value.trim() : "";
+  const note = f("fNote").value.trim();
+  if (editing.isPlan) {
+    const p = PLAN.find((x,i) => planKey(i) === editing.key);
+    const recDate = toISO(addDays(parseDate(state.race), -p.o));
+    const recText = p.t.replace(" (semana leve)","");
+    const e = {};
+    if (text && text !== recText) e.text = text;
+    if (date && date !== recDate) e.date = date;
+    if (km) e.km = km;
+    if (time) e.time = time;
+    if (note) e.note = note;
+    if (Object.keys(e).length) state.edits[editing.key] = e; else delete state.edits[editing.key];
+  } else if (editing.key) {
+    const x = state.extras.find(x => x.id === editing.key);
+    if (x) Object.assign(x, { text: text || "Treino extra", date, km, time, note });
+  } else {
+    const id = "x" + Date.now();
+    state.extras.push({ id, w: editing.w, text: text || "Treino extra", date, km, time, note });
+    editing.key = id;
+  }
+  if (f("fDone").checked) state.done[editing.key] = true; else delete state.done[editing.key];
+  closeEditor();
+  save();
+});
+f("dCancel").addEventListener("click", closeEditor);
+f("dReset").addEventListener("click", () => {
+  if (!editing || !editing.isPlan) return;
+  if (!confirm("Voltar este treino ao recomendado? A distância, o tempo e a anotação serão apagados.")) return;
+  delete state.edits[editing.key];
+  closeEditor(); save();
+});
+f("dDelete").addEventListener("click", () => {
+  if (!editing || editing.isPlan) return;
+  if (!confirm("Excluir este treino extra?")) return;
+  state.extras = state.extras.filter(x => x.id !== editing.key);
+  delete state.done[editing.key];
+  closeEditor(); save();
+});
+dlg.addEventListener("click", e => { if (e.target === dlg) closeEditor(); });
+
+/* ---------- cópia de segurança ---------- */
+f("bkGen").addEventListener("click", () => { f("backupText").value = btoa(unescape(encodeURIComponent(JSON.stringify(state)))); });
+f("bkCopy").addEventListener("click", async () => {
+  if (!f("backupText").value) f("backupText").value = btoa(unescape(encodeURIComponent(JSON.stringify(state))));
+  try { await navigator.clipboard.writeText(f("backupText").value); f("bkCopy").textContent = "Copiado"; }
+  catch(e){ f("backupText").select(); document.execCommand("copy"); f("bkCopy").textContent = "Copiado"; }
+  setTimeout(() => f("bkCopy").textContent = "Copiar", 2000);
+});
+f("bkLoad").addEventListener("click", () => {
+  try {
+    const p = JSON.parse(decodeURIComponent(escape(atob(f("backupText").value.trim()))));
+    if (!p || typeof p !== "object" || !p.done) throw new Error();
+    if (!confirm("Substituir tudo que está no app por esta cópia?")) return;
+    state = { race: p.race || DEFAULT_RACE, done: p.done || {}, edits: p.edits || {}, extras: Array.isArray(p.extras) ? p.extras : [], updatedAt: 0 };
+    save(); alert("Cópia restaurada.");
+  } catch(e){ alert("Código inválido. Confira se copiou ele inteiro."); }
+});
+
+/* ---------- abas e início ---------- */
+document.querySelectorAll("nav button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll("nav button").forEach(x => x.setAttribute("aria-selected", x === b ? "true" : "false"));
+  document.querySelectorAll(".panel").forEach(p => p.hidden = p.id !== b.dataset.tab);
+  window.scrollTo(0,0);
+}));
+f("race").addEventListener("change", e => { if (e.target.value) { state.race = e.target.value; save(); } });
+
+loadLocal();
+buildGuide();
+render();
+</script>
+</body>
+</html>
