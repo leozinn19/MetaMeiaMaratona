@@ -8,6 +8,7 @@
 :root{
   --bg:#EEF1EC; --card:#FFFFFF; --ink:#18212B; --muted:#5D6873; --line:#D5DBD3;
   --accent:#1F4FD1; --accentSoft:#DDE6FB; --onAccent:#FFFFFF; --done:#2A7F4F; --doneSoft:#DCEFE3; --race:#F2C230; --warn:#C2412D;
+  --s1:#2F62D8; --s1Soft:#DCE5FA; --s2:#2A9160; --s2Soft:#D7EEE1; --s3:#D9811A; --s3Soft:#F8E5CC; --s4:#8A55D0; --s4Soft:#E9DEF7;
   color-scheme:light;
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
@@ -17,6 +18,7 @@
   :root{
     --bg:#11161B; --card:#1A2128; --ink:#E8ECEF; --muted:#9AA5AF; --line:#2C353E;
     --accent:#7FA2FF; --accentSoft:#1E2C4D; --onAccent:#0F1520; --done:#5CC88A; --doneSoft:#173526; --warn:#FF8A73;
+    --s1:#7FA2FF; --s1Soft:#22304D; --s2:#5CC88A; --s2Soft:#1B3A2A; --s3:#F2A64B; --s3Soft:#42311C; --s4:#B894F5; --s4Soft:#33284A;
     color-scheme:dark;
   }
 }
@@ -96,7 +98,43 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 .backup p{margin:0 0 10px;font-size:14px;color:var(--muted)}
 .backup textarea{min-height:90px;font-size:12px;margin-bottom:10px}
 .backup .btns{display:flex;gap:8px;flex-wrap:wrap}
-@media (prefers-reduced-motion: reduce){.trackFill{transition:none}}
+.chartCard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 14px 12px;margin-bottom:16px}
+.chartCard h2{margin:0 0 4px;font-size:22px;font-weight:800}
+.polar{display:block;width:100%;max-width:300px;margin:0 auto;overflow:visible;-webkit-tap-highlight-color:transparent}
+.polar .pz{transition:transform .35s ease}
+.polar.zoomed .pz{transform:scale(1.07)}
+.polar .slice{cursor:pointer;transition:transform .35s ease,opacity .35s ease;outline:none}
+.polar.zoomed .slice:not(.on){opacity:.22}
+.polar .slice path{stroke:var(--card);stroke-width:2;stroke-linejoin:round}
+.polar .slice:focus-visible .bg{stroke:var(--accent);stroke-width:3}
+.polar .hole{fill:var(--card)}
+.polar .cPct{font:800 30px "Roboto Condensed","Arial Narrow",system-ui,sans-serif;fill:var(--ink)}
+.polar .cLab{font:600 10px system-ui,sans-serif;fill:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px}
+.legend button{display:flex;align-items:center;gap:6px;font:600 13px system-ui,sans-serif;padding:7px 10px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);transition:opacity .35s,background .35s,border-color .35s}
+.legend button .dot{width:12px;height:12px;border-radius:50%;flex:none}
+.legend button .lp{color:var(--muted);font-weight:500}
+.legend.zoomed button:not([aria-pressed="true"]){opacity:.5}
+.zoomPanel{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows .35s ease,opacity .35s ease}
+.zoomPanel.open{grid-template-rows:1fr;opacity:1}
+.zpInner{overflow:hidden;min-height:0}
+.zpBody{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.zpHead{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.zpHead h3{margin:0;font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}
+.zpHead h3 .dot{width:12px;height:12px;border-radius:50%}
+.zpVal{font-size:32px;font-weight:800;line-height:1.1;margin:6px 0 8px}
+.bar{position:relative;height:10px;border-radius:5px;overflow:hidden}
+.bar i{position:absolute;inset:0 auto 0 0;border-radius:5px;transition:width .4s ease}
+.zpList{list-style:none;margin:12px 0 0;padding:0}
+.zpList li{padding:8px 0;border-top:1px solid var(--line);font-size:14px}
+.zpList li:first-child{border-top:0}
+.zpRow{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.zpRow .r{color:var(--muted);white-space:nowrap}
+.zpRow .ok{color:var(--done);font-weight:600}
+.zpList .bar{height:6px;margin-top:5px}
+@media (prefers-reduced-motion: reduce){
+  .trackFill,.polar .pz,.polar .slice,.legend button,.zoomPanel,.bar i{transition:none}
+}
 </style>
 </head>
 <body>
@@ -120,6 +158,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   </nav>
 
   <section class="panel" id="cal">
+    <div id="chartCal"></div>
     <p class="intro">Toque no treino para alterar data, distância, tempo ou anotação.</p>
     <div class="tools">
       <label for="race">Data da prova</label>
@@ -130,6 +169,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   </section>
 
   <section class="panel" id="prep" hidden>
+    <div id="chartPrep"></div>
     <p class="intro">Consultas, exames e tarefas para chegar pronto no dia.</p>
     <div class="week" id="prepList"></div>
   </section>
@@ -254,6 +294,17 @@ function paceText(km, time){
   return fmtDur(sec/km) + " por km";
 }
 function isRun(text){ return !/fortalecimento/i.test(text); }
+/* km do texto: "5 km" vale 5, "5 a 6 km" vale 5 (menor valor da faixa) */
+function textKm(text){
+  const m = String(text || "").match(/(\d+(?:[.,]\d+)?)(?:\s*a\s*\d+(?:[.,]\d+)?)?\s*km/i);
+  return m ? parseFloat(m[1].replace(",", ".")) : 0;
+}
+function baseText(it){ return it.isPlan ? it.recText : it.text; }
+function isRunItem(it){ return isRun(baseText(it)); }
+function isOptional(it){ return /opcional/i.test(baseText(it)); }
+/* km digitado pelo usuário ou, se não houver, km do texto recomendado */
+function kmOf(it){ return it.km || textKm(baseText(it)); }
+function phaseName(f){ return String(f || "").replace(/^\d\.\s*/, ""); }
 
 /* ---------- armazenamento ---------- */
 function loadLocal(){
@@ -305,6 +356,213 @@ function weekBounds(w){
   return { monday: addDays(sunday, -6), sunday };
 }
 
+/* ---------- gráfico polar ---------- */
+const SVGNS = "http://www.w3.org/2000/svg";
+const R0 = 40, R1 = 96, PUSH = 9;
+function svgEl(tag, attrs){ const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; }
+function htmlEl(tag, cls, text){ const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+function pt(r, a){ return (r*Math.sin(a)).toFixed(2) + " " + (-r*Math.cos(a)).toFixed(2); }
+function sectorPath(r0, r1, a0, a1){
+  if (r1 <= r0 + 0.01) return "";
+  const large = a1 - a0 > Math.PI ? 1 : 0;
+  return "M" + pt(r1,a0) + "A" + r1 + " " + r1 + " 0 " + large + " 1 " + pt(r1,a1) +
+         "L" + pt(r0,a1) + "A" + r0 + " " + r0 + " 0 " + large + " 0 " + pt(r0,a0) + "Z";
+}
+function pctText(p){ return Math.round(p*100) + "%"; }
+function clamp01(x){ return Math.max(0, Math.min(1, x || 0)); }
+function miniBar(color, pct){
+  const b = htmlEl("div", "bar"); b.style.background = "var(--" + color + "Soft)";
+  const i = document.createElement("i"); i.style.background = "var(--" + color + ")"; i.style.width = (clamp01(pct)*100) + "%";
+  b.appendChild(i); return b;
+}
+
+/* defs: [{name, color}] com color sendo s1 a s4 */
+function makePolarChart(host, title, defs){
+  const n = defs.length, step = 2*Math.PI/n;
+  const card = htmlEl("div", "chartCard");
+  card.appendChild(htmlEl("h2", "cond", title));
+
+  const svg = svgEl("svg", { viewBox: "-112 -112 224 224", class: "polar", role: "group", "aria-label": title });
+  const pz = svgEl("g", { class: "pz" });
+  const slices = defs.map((d, i) => {
+    const a0 = i*step, a1 = (i+1)*step, mid = (a0 + a1)/2;
+    const g = svgEl("g", { class: "slice", tabindex: "0", role: "button" });
+    const bg = svgEl("path", { class: "bg", d: sectorPath(R0, R1, a0, a1), fill: "var(--" + d.color + "Soft)" });
+    const fg = svgEl("path", { class: "fg", d: "", fill: "var(--" + d.color + ")" });
+    g.append(bg, fg);
+    g.addEventListener("click", () => select(i));
+    g.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(i); } });
+    pz.appendChild(g);
+    return { g, fg, a0, a1, dx: PUSH*Math.sin(mid), dy: -PUSH*Math.cos(mid) };
+  });
+  pz.appendChild(svgEl("circle", { class: "hole", r: R0 - 1 }));
+  const cPct = svgEl("text", { class: "cPct", "text-anchor": "middle", y: "6" });
+  const cLab = svgEl("text", { class: "cLab", "text-anchor": "middle", y: "22" });
+  svg.append(pz, cPct, cLab);
+  card.appendChild(svg);
+
+  const legend = htmlEl("div", "legend");
+  const legBtns = defs.map((d, i) => {
+    const b = htmlEl("button"); b.type = "button"; b.setAttribute("aria-pressed", "false");
+    const dot = htmlEl("span", "dot"); dot.style.background = "var(--" + d.color + ")";
+    const lp = htmlEl("span", "lp");
+    b.append(dot, document.createTextNode(d.name), lp);
+    b.addEventListener("click", () => select(i));
+    legend.appendChild(b);
+    return { b, lp };
+  });
+  card.appendChild(legend);
+
+  const panel = htmlEl("div", "zoomPanel");
+  panel.setAttribute("aria-live", "polite");
+  const inner = htmlEl("div", "zpInner");
+  panel.appendChild(inner);
+  card.appendChild(panel);
+  host.appendChild(card);
+
+  let sel = null, data = null;
+
+  function select(i){ sel = sel === i ? null : i; paint(); }
+
+  function fillPanel(){
+    const d = defs[sel], v = data[sel];
+    const body = htmlEl("div", "zpBody");
+    const head = htmlEl("div", "zpHead");
+    const h3 = htmlEl("h3");
+    const dot = htmlEl("span", "dot"); dot.style.background = "var(--" + d.color + ")";
+    h3.append(dot, document.createTextNode(d.name));
+    const close = htmlEl("button", "btn", "Fechar"); close.type = "button";
+    close.addEventListener("click", () => { const i = sel; sel = null; paint(); legBtns[i].b.focus(); });
+    head.append(h3, close);
+    body.append(head, htmlEl("div", "zpVal cond", v.value), miniBar(d.color, v.pct));
+    const ul = htmlEl("ul", "zpList");
+    v.rows.forEach(r => {
+      const li = document.createElement("li");
+      const row = htmlEl("div", "zpRow");
+      row.appendChild(htmlEl("span", "", r.label));
+      if (r.status != null) row.appendChild(htmlEl("span", r.status ? "r ok" : "r", r.status ? "Feito" : "Pendente"));
+      else if (r.right) row.appendChild(htmlEl("span", "r", r.right));
+      li.appendChild(row);
+      if (r.pct != null) li.appendChild(miniBar(d.color, r.pct));
+      ul.appendChild(li);
+    });
+    body.appendChild(ul);
+    inner.replaceChildren(body);
+  }
+
+  function paint(){
+    if (!data) return;
+    const zoomed = sel !== null;
+    svg.classList.toggle("zoomed", zoomed);
+    legend.classList.toggle("zoomed", zoomed);
+    slices.forEach((s, i) => {
+      const on = sel === i;
+      s.g.classList.toggle("on", on);
+      s.g.style.transform = on ? "translate(" + s.dx.toFixed(2) + "px," + s.dy.toFixed(2) + "px)" : "";
+      s.g.setAttribute("aria-pressed", on ? "true" : "false");
+      legBtns[i].b.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+    if (zoomed) {
+      cPct.textContent = pctText(data[sel].pct);
+      cLab.textContent = defs[sel].name;
+      fillPanel();
+      panel.classList.add("open");
+      panel.removeAttribute("aria-hidden"); inner.inert = false;
+    } else {
+      const avg = data.reduce((s, v) => s + v.pct, 0) / n;
+      cPct.textContent = pctText(avg);
+      cLab.textContent = "geral";
+      panel.classList.remove("open");
+      panel.setAttribute("aria-hidden", "true"); inner.inert = true;
+    }
+  }
+
+  /* vals: [{pct, value, rows}] na mesma ordem de defs */
+  function update(vals){
+    data = vals.map(v => Object.assign({}, v, { pct: clamp01(v.pct) }));
+    slices.forEach((s, i) => {
+      s.fg.setAttribute("d", sectorPath(R0, R0 + (R1 - R0)*data[i].pct, s.a0, s.a1));
+      s.g.setAttribute("aria-label", defs[i].name + ", " + pctText(data[i].pct) + ", " + data[i].value);
+      legBtns[i].lp.textContent = pctText(data[i].pct);
+    });
+    paint();
+  }
+  return { update };
+}
+
+/* ---------- metas ---------- */
+const PHASES = ["Base","Construção","Volume","Pico","Polimento"];
+const PREP_GROUPS = [
+  { name: "Consultas", color: "s1", idx: [0,1,5] },
+  { name: "Exames", color: "s2", idx: [2,3,4] },
+  { name: "Equipamento", color: "s3", idx: [6,9,10] },
+  { name: "Prova e rotina", color: "s4", idx: [7,8,11] }
+];
+let calChart = null, prepChart = null;
+
+function ratio(a, b){ return b ? a/b : 0; }
+function countRows(goal, isDone){
+  return PHASES.map(ph => {
+    const g = goal.filter(it => phaseName(it.f) === ph);
+    const d = g.filter(isDone).length;
+    return { label: ph, right: d + " de " + g.length, pct: ratio(d, g.length) };
+  }).filter(r => r.right !== "0 de 0");
+}
+
+function calendarValues(items){
+  const isDone = it => !!state.done[it.key];
+  const plan = items.filter(it => it.isPlan);
+  const runGoal = plan.filter(it => isRunItem(it) && !isOptional(it));
+  const doneRuns = items.filter(it => isDone(it) && isRunItem(it));
+
+  /* km: meta só com corridas do plano sem opcionais, feito com todas as corridas feitas */
+  const kmGoal = runGoal.reduce((s, it) => s + textKm(it.recText), 0);
+  const kmDone = doneRuns.reduce((s, it) => s + kmOf(it), 0);
+  const kmRows = PHASES.map(ph => {
+    const g = runGoal.filter(it => phaseName(it.f) === ph).reduce((s, it) => s + textKm(it.recText), 0);
+    const d = doneRuns.filter(it => it.isPlan && phaseName(it.f) === ph).reduce((s, it) => s + kmOf(it), 0);
+    return { label: ph, right: fmtKm(d) + " de " + fmtKm(g) + " km", pct: ratio(d, g) };
+  });
+  const extraKm = doneRuns.filter(it => !it.isPlan).reduce((s, it) => s + kmOf(it), 0);
+  const extraCount = doneRuns.filter(it => !it.isPlan).length;
+  if (extraCount) kmRows.push({ label: "Treinos extras (" + extraCount + ")", right: fmtKm(extraKm) + " km" });
+
+  const runsDone = runGoal.filter(isDone).length;
+  const longs = plan.filter(it => /^Longão/i.test(it.recText));
+  const longsDone = longs.filter(isDone).length;
+  const strength = plan.filter(it => /fortalecimento/i.test(it.recText));
+  const strDone = strength.filter(isDone).length;
+
+  return [
+    { pct: ratio(kmDone, kmGoal), value: fmtKm(kmDone) + " de " + fmtKm(kmGoal) + " km", rows: kmRows },
+    { pct: ratio(runsDone, runGoal.length), value: runsDone + " de " + runGoal.length + " corridas", rows: countRows(runGoal, isDone) },
+    { pct: ratio(longsDone, longs.length), value: longsDone + " de " + longs.length + " longões",
+      rows: longs.slice().sort((a, b) => a.date - b.date).map(it => ({ label: fmtDate(it.date) + ", " + fmtKm(textKm(it.recText)) + " km", status: isDone(it) })) },
+    { pct: ratio(strDone, strength.length), value: strDone + " de " + strength.length + " sessões", rows: countRows(strength, isDone) }
+  ];
+}
+
+function prepValues(){
+  return PREP_GROUPS.map(g => {
+    const d = g.idx.filter(i => state.done["p" + i]).length;
+    return {
+      pct: ratio(d, g.idx.length),
+      value: d + " de " + g.idx.length + " itens",
+      rows: g.idx.map(i => ({ label: PREP[i][0], status: !!state.done["p" + i] }))
+    };
+  });
+}
+
+function renderCharts(items){
+  if (!calChart) calChart = makePolarChart(document.getElementById("chartCal"), "Metas de treino", [
+    { name: "Km corridos", color: "s1" }, { name: "Corridas", color: "s2" },
+    { name: "Longões", color: "s3" }, { name: "Fortalecimento", color: "s4" }
+  ]);
+  if (!prepChart) prepChart = makePolarChart(document.getElementById("chartPrep"), "Preparação", PREP_GROUPS);
+  calChart.update(calendarValues(items));
+  prepChart.update(prepValues());
+}
+
 /* ---------- tela ---------- */
 function render(){
   const race = parseDate(state.race);
@@ -316,8 +574,9 @@ function render(){
 
   const items = allItems();
   const doneItems = items.filter(it => state.done[it.key]);
-  const totalKm = doneItems.reduce((s,it) => s + (it.km || 0), 0);
-  const longest = doneItems.reduce((m,it) => Math.max(m, it.km || 0), 0);
+  const doneRuns = doneItems.filter(isRunItem);
+  const totalKm = doneRuns.reduce((s,it) => s + kmOf(it), 0);
+  const longest = doneRuns.reduce((m,it) => Math.max(m, kmOf(it)), 0);
   document.getElementById("sDone").textContent = doneItems.length + "/" + items.length;
   document.getElementById("sKm").textContent = fmtKm(totalKm);
   document.getElementById("sLong").textContent = fmtKm(longest);
@@ -363,6 +622,7 @@ function render(){
   goNow.onclick = () => { const el = document.getElementById("w" + currentWeek); if (el) el.scrollIntoView({behavior:"smooth"}); };
 
   renderPrep();
+  renderCharts(items);
 }
 
 function itemRow(it, t){
