@@ -98,6 +98,38 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 .backup p{margin:0 0 10px;font-size:14px;color:var(--muted)}
 .backup textarea{min-height:90px;font-size:12px;margin-bottom:10px}
 .backup .btns{display:flex;gap:8px;flex-wrap:wrap}
+#detBody .date{font-size:13px;color:var(--muted);text-transform:capitalize}
+#detBody h3{margin:2px 0 12px}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.tile{border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-width:0}
+.tile .tv{font-size:22px;font-weight:800;line-height:1.1}
+.tile .tl{font-size:12px;color:var(--muted)}
+.tile .tf{font-size:11px;font-weight:600;color:var(--warn);margin-top:2px}
+.tile .tf::before{content:"!";display:inline-grid;place-items:center;width:13px;height:13px;border-radius:50%;background:var(--warn);color:var(--card);font-size:10px;margin-right:4px;vertical-align:-1px}
+.tile.flag{border-color:var(--warn)}
+.kmBox{border:1px solid var(--line);border-radius:12px;padding:10px 10px 8px;margin-bottom:12px}
+.kmHead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.kmHead h4{margin:0;font-size:15px}
+.flagTag{font-size:12px;font-weight:600;color:var(--warn);border:1px solid var(--warn);border-radius:999px;padding:1px 8px}
+.kmChart{display:block;width:100%;height:auto;margin-top:6px}
+.kmChart .grid{stroke:var(--line);stroke-width:1}
+.kmChart .axis{font:10px system-ui,sans-serif;fill:var(--muted)}
+.kmChart .ref{stroke:var(--ink);stroke-width:1.5;stroke-dasharray:4 3;opacity:.6;pointer-events:none}
+.kmChart .kbar{fill:var(--s1);transition:opacity .2s}
+.kmChart .kbar.flag{fill:var(--warn)}
+.kmChart .kbar:not(.sel){opacity:.75}
+.kmChart .hit{fill:transparent;cursor:pointer}
+.kmLeg{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted);margin-top:4px}
+.kmLeg span{display:flex;align-items:center;gap:5px}
+.kmLeg .sw{display:inline-block;width:10px;height:10px;border-radius:3px}
+.kmLeg .sw.ok{background:var(--s1)}
+.kmLeg .sw.bad{background:var(--warn)}
+.kmLeg .sw.refl{height:0;width:14px;border-top:2px dashed var(--ink);opacity:.6;border-radius:0}
+.kmCap{font-size:14px;font-weight:600;margin-top:6px;min-height:20px}
+.impBox{margin:0 0 14px}
+.impInfo{font-size:13px;color:var(--muted);margin-top:8px;background:var(--doneSoft);border-radius:8px;padding:8px 10px}
+.impInfo span{display:block;color:var(--ink)}
+.linkBtn{background:none;border:0;padding:4px 0 0;color:var(--warn);font:600 13px system-ui,sans-serif}
 .chartCard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 14px 12px;margin-bottom:16px}
 .chartCard h2{margin:0 0 4px;font-size:22px;font-weight:800}
 .polar{display:block;width:100%;max-width:300px;margin:0 auto;overflow:visible;-webkit-tap-highlight-color:transparent}
@@ -106,6 +138,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 .polar .slice{cursor:pointer;transition:transform .35s ease,opacity .35s ease;outline:none}
 .polar.zoomed .slice:not(.on){opacity:.22}
 .polar .slice path{stroke:var(--card);stroke-width:2;stroke-linejoin:round}
+.polar .slice .ov{stroke-width:1}
 .polar .slice:focus-visible .bg{stroke:var(--accent);stroke-width:3}
 .polar .hole{fill:var(--card)}
 .polar .cPct{font:800 30px "Roboto Condensed","Arial Narrow",system-ui,sans-serif;fill:var(--ink)}
@@ -164,6 +197,8 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       <label for="race">Data da prova</label>
       <input type="date" id="race">
       <button class="btn" id="goNow">Ir para esta semana</button>
+      <button class="btn" id="impMany">Importar GPX ou TCX</button>
+      <input type="file" id="impManyFile" accept=".gpx,.tcx,application/gpx+xml,application/xml,text/xml" multiple hidden>
     </div>
     <div id="weeks"></div>
   </section>
@@ -193,6 +228,14 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   <form class="sheet" method="dialog" id="form">
     <h3 id="dTitle">Editar treino</h3>
     <div class="rec" id="dRec"><b>Recomendado</b><span id="dRecText"></span></div>
+    <div class="impBox">
+      <button type="button" class="btn" id="dImport">Preencher com arquivo GPX ou TCX</button>
+      <input type="file" id="fFile" accept=".gpx,.tcx,application/gpx+xml,application/xml,text/xml" hidden>
+      <div class="impInfo" id="fImpInfo" hidden>
+        <span id="fImpText"></span>
+        <button type="button" class="linkBtn" id="dImpClear">Tirar dados do arquivo</button>
+      </div>
+    </div>
     <div class="field">
       <label for="fText">Treino</label>
       <input type="text" id="fText">
@@ -226,6 +269,10 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       <button type="button" class="btn solid" id="dSave">Salvar</button>
     </div>
   </form>
+</dialog>
+
+<dialog id="det">
+  <div class="sheet" id="detBody"></div>
 </dialog>
 
 <script>
@@ -305,6 +352,304 @@ function isOptional(it){ return /opcional/i.test(baseText(it)); }
 /* km digitado pelo usuário ou, se não houver, km do texto recomendado */
 function kmOf(it){ return it.km || textKm(baseText(it)); }
 function phaseName(f){ return String(f || "").replace(/^\d\.\s*/, ""); }
+function isLong(it){ return /longão/i.test(baseText(it)); }
+function isStrength(it){ return /fortalecimento/i.test(baseText(it)); }
+
+/* ---------- importar GPX e TCX ---------- */
+function xKids(el, name){ return Array.from(el.getElementsByTagNameNS("*", name)); }
+function xChild(el, name){ return Array.from(el.children).find(c => c.localName === name) || null; }
+function xText(el, name){ const e = el && el.getElementsByTagNameNS("*", name)[0]; return e ? e.textContent.trim() : null; }
+function xNum(v){ const n = parseFloat(v); return isFinite(n) ? n : null; }
+function haversine(a, b){
+  const R = 6371000, k = Math.PI/180;
+  const dLat = (b.lat - a.lat)*k, dLon = (b.lon - a.lon)*k;
+  const s = Math.sin(dLat/2)**2 + Math.cos(a.lat*k)*Math.cos(b.lat*k)*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.min(1, Math.sqrt(s)));
+}
+/* subida e descida com filtro de 3 m para ignorar o ruído do GPS */
+function elevation(eles){
+  let up = 0, down = 0, ref = null;
+  eles.forEach(e => {
+    if (e == null) return;
+    if (ref == null) { ref = e; return; }
+    const d = e - ref;
+    if (d >= 3) { up += d; ref = e; } else if (d <= -3) { down -= d; ref = e; }
+  });
+  return { up: Math.round(up), down: Math.round(down) };
+}
+function avg(list){ const v = list.filter(x => x != null && x > 0); return v.length ? v.reduce((s, x) => s + x, 0)/v.length : null; }
+
+/* lê o arquivo e devolve { start, km, moving, imp } */
+function parseActivity(text){
+  const doc = new DOMParser().parseFromString(text, "application/xml");
+  if (doc.getElementsByTagName("parsererror").length) throw new Error("o arquivo não é um GPX ou TCX válido");
+  const root = doc.documentElement.localName.toLowerCase();
+  let src, pts, distM = null, moving = null;
+  const lapHr = { sum: 0, w: 0, max: 0 };
+  let lapKcal = 0, lapSteps = 0, actKcal = null;
+
+  if (root === "gpx") {
+    src = "gpx";
+    pts = xKids(doc, "trkpt").map(p => ({
+      lat: xNum(p.getAttribute("lat")), lon: xNum(p.getAttribute("lon")),
+      ele: xNum(xText(p, "ele")), t: Date.parse(xText(p, "time")),
+      hr: xNum(xText(p, "hr")), cad: xNum(xText(p, "cad"))
+    }));
+    /* Mi Fitness grava a distância do relógio em <totalDistance> */
+    const td = xNum(xText(doc, "totalDistance"));
+    if (td) distM = td;
+  } else if (root === "trainingcenterdatabase") {
+    src = "tcx";
+    pts = xKids(doc, "Trackpoint").map(p => {
+      const pos = xChild(p, "Position");
+      const hrEl = xChild(p, "HeartRateBpm");
+      return {
+        lat: pos ? xNum(xText(pos, "LatitudeDegrees")) : null, lon: pos ? xNum(xText(pos, "LongitudeDegrees")) : null,
+        ele: xNum(xText(p, "AltitudeMeters")), t: Date.parse(xText(p, "Time")),
+        d: xNum(xChild(p, "DistanceMeters") && xChild(p, "DistanceMeters").textContent),
+        hr: hrEl ? xNum(xText(hrEl, "Value")) : null,
+        cad: xNum(xText(p, "RunCadence") || (xChild(p, "Cadence") && xChild(p, "Cadence").textContent))
+      };
+    });
+    const laps = xKids(doc, "Lap");
+    const lv = (l, name) => { const c = xChild(l, name); if (!c) return null; const v = xChild(c, "Value"); return xNum((v || c).textContent); };
+    if (laps.length) {
+      const ld = laps.map(l => lv(l, "DistanceMeters"));
+      const lt = laps.map(l => lv(l, "TotalTimeSeconds"));
+      if (ld.every(x => x != null)) distM = ld.reduce((s, x) => s + x, 0);
+      if (lt.every(x => x != null)) moving = lt.reduce((s, x) => s + x, 0);
+      /* resumo da volta: padrão Garmin (AverageHeartRateBpm) ou Mi Fitness (HeartRateBpm com o número direto) */
+      laps.forEach((l, i) => {
+        const w = lt[i] || 1;
+        const h = lv(l, "AverageHeartRateBpm") != null ? lv(l, "AverageHeartRateBpm") : lv(l, "HeartRateBpm");
+        if (h) { lapHr.sum += h*w; lapHr.w += w; }
+        const hm = lv(l, "MaximumHeartRateBpm"); if (hm) lapHr.max = Math.max(lapHr.max, hm);
+        const k = lv(l, "Calories"); if (k) lapKcal += k;
+        const st = lv(l, "Steps"); if (st) lapSteps += st;
+      });
+    }
+    const act = xKids(doc, "Activity")[0];
+    actKcal = act ? lv(act, "Calories") : null;
+    if (distM == null) { const ds = pts.map(p => p.d).filter(x => x != null); if (ds.length) distM = Math.max(...ds); }
+  } else {
+    throw new Error("formato não reconhecido. Use GPX ou TCX");
+  }
+
+  const timed = pts.filter(p => isFinite(p.t)).sort((a, b) => a.t - b.t);
+  if (timed.length < 2) throw new Error("o arquivo não tem horários dos pontos");
+  const geo = timed.filter(p => p.lat != null && p.lon != null);
+
+  /* distância pelas coordenadas e tempo em movimento (acima de 0,5 m/s) */
+  const seg = [];
+  let gpsDist = 0, gpsMoving = 0;
+  for (let i = 1; i < geo.length; i++) {
+    const dd = haversine(geo[i-1], geo[i]), dt = (geo[i].t - geo[i-1].t)/1000;
+    const mv = dt > 0 && dd/dt >= 0.5;
+    gpsDist += dd;
+    if (mv) gpsMoving += dt;
+    seg.push({ dd, dt: mv ? dt : 0, hr: geo[i].hr, cad: geo[i].cad });
+  }
+  if (distM == null) distM = gpsDist;
+  const elapsed = (timed[timed.length-1].t - timed[0].t)/1000;
+  if (moving == null) moving = gpsMoving || elapsed;
+  if (!distM) throw new Error("não encontrei a distância no arquivo");
+
+  /* parciais por km: distância do GPS ajustada para bater com a do relógio */
+  /* também junta FC e cadência de cada km, quando o arquivo grava ponto a ponto */
+  const splits = [], kmHrL = [], kmCadL = [];
+  let hrPeak = null;
+  if (gpsDist > 0 && Math.abs(distM/gpsDist - 1) < 0.2) {
+    const scale = distM/gpsDist;
+    let d = 0, t = 0, last = 0;
+    /* pico de FC: maior média em 60 s seguidos */
+    const win = [];
+    seg.forEach(s => {
+      const dd = s.dd*scale;
+      const k = Math.floor(d/1000);
+      if (s.hr) { (kmHrL[k] = kmHrL[k] || []).push(s.hr); win.push({ t, hr: s.hr, d }); }
+      if (s.cad) (kmCadL[k] = kmCadL[k] || []).push(s.cad);
+      while (win.length && t - win[0].t > 60) win.shift();
+      if (win.length >= 5) {
+        const a = win.reduce((x, p) => x + p.hr, 0)/win.length;
+        if (!hrPeak || a > hrPeak.bpm) hrPeak = { bpm: Math.round(a), km: Math.round(d/100)/10, min: Math.round(t/60) };
+      }
+      while (s.dt && d + dd >= (splits.length + 1)*1000) {
+        const f = Math.max(0, ((splits.length + 1)*1000 - d)/dd);
+        const at = t + s.dt*f;
+        splits.push(Math.round(at - last)); last = at;
+        if (splits.length > 60) break;
+      }
+      d += dd; t += s.dt;
+    });
+  }
+
+  const ele = elevation(timed.map(p => p.ele));
+  const hr = avg(timed.map(p => p.hr)) || (lapHr.w ? lapHr.sum/lapHr.w : null);
+  const hrMax = timed.reduce((m, p) => Math.max(m, p.hr || 0), 0) || lapHr.max;
+  let cad = avg(timed.map(p => p.cad));
+  if (cad && cad < 120) cad *= 2; /* relógios gravam passos de uma perna só */
+  if (!cad && lapSteps && moving) cad = lapSteps/(moving/60);
+  const kcal = actKcal || lapKcal;
+
+  const imp = { src, start: new Date(timed[0].t).toISOString(), elapsed: Math.round(elapsed), moving: Math.round(moving) };
+  if (ele.up || ele.down) { imp.up = ele.up; imp.down = ele.down; }
+  if (hr) imp.hr = Math.round(hr);
+  if (hrMax) imp.hrMax = Math.round(hrMax);
+  if (cad) imp.cad = Math.round(cad);
+  if (lapSteps) imp.steps = Math.round(lapSteps);
+  if (kcal) imp.kcal = Math.round(kcal);
+  if (splits.length) imp.splits = splits;
+  const perKm = (list, mult) => list.length ? Array.from(list, v => v && v.length ? Math.round(avg(v)*mult) : 0) : null;
+  const kh = perKm(kmHrL, 1);
+  if (kh && kh.some(Boolean)) imp.kmHr = kh;
+  const cadMult = avg(kmCadL.flat()) < 120 ? 2 : 1;
+  const kc = perKm(kmCadL, cadMult);
+  if (kc && kc.some(Boolean)) imp.kmCad = kc;
+  if (hrPeak) imp.hrPeak = hrPeak;
+  return { start: new Date(timed[0].t), km: Math.round(distM/10)/100, moving: Math.round(moving), imp };
+}
+
+/* ---------- análise da corrida importada ---------- */
+/* limites aproximados. easy = treino em ritmo de conversa */
+function analyze(imp, easy){
+  const s = imp.splits || [];
+  const r = { pace: null, hr: null, cad: null, drop: false, hrHigh: !!(easy && imp.hr >= 160), cadLow: !!(imp.cad && imp.cad < 150) };
+  if (s.length >= 2) {
+    const med = s.slice().sort((a, b) => a - b)[Math.floor(s.length/2)];
+    const lim = Math.max(30, med*0.08);
+    r.pace = { ref: med, flags: s.map(v => v - med > lim ? "lento" : med - v > lim ? "rápido" : "") };
+    if (s.length >= 4) {
+      const h = Math.floor(s.length/2);
+      const a1 = s.slice(0, h).reduce((a, b) => a + b, 0)/h, a2 = s.slice(-h).reduce((a, b) => a + b, 0)/h;
+      r.drop = a2 > a1*1.05;
+    }
+  }
+  if (imp.kmHr && imp.hr) r.hr = { ref: imp.hr, flags: imp.kmHr.map(v => v && v >= imp.hr + 8 ? "alta" : "") };
+  if (imp.kmCad && imp.cad) r.cad = { ref: imp.cad, flags: imp.kmCad.map(v => !v ? "" : v < imp.cad*0.93 ? "baixa" : v > imp.cad*1.07 ? "alta" : "") };
+  return r;
+}
+
+/* gráfico de barras por km. higherIsBetter=false para ritmo: barra mais alta = km mais rápido */
+function kmBarChart(o){
+  const W = 320, H = 150, L = 36, Rr = 8, T = 10, B = 22;
+  const pw = W - L - Rr, ph = H - T - B, n = o.vals.length;
+  const valid = o.vals.filter(v => v > 0);
+  let lo = Math.min(...valid), hi = Math.max(...valid);
+  const pad = Math.max((hi - lo)*0.25, o.minPad);
+  lo -= pad; hi += pad;
+  /* altura da barra: quanto melhor, mais alta */
+  const hgt = v => o.invert ? (hi - v)/(hi - lo)*ph : (v - lo)/(hi - lo)*ph;
+  const yOf = v => T + ph - hgt(v);
+  const svg = svgEl("svg", { viewBox: "0 0 " + W + " " + H, class: "kmChart", role: "img", "aria-label": o.title });
+  /* grade e eixo: 3 marcas */
+  [0, 0.5, 1].forEach(f => {
+    const v = o.invert ? hi - f*(hi - lo) : lo + f*(hi - lo);
+    const y = T + ph - f*ph;
+    svg.appendChild(svgEl("line", { x1: L, x2: W - Rr, y1: y, y2: y, class: "grid" }));
+    const tx = svgEl("text", { x: L - 6, y: y + 3.5, "text-anchor": "end", class: "axis" }); tx.textContent = o.fmt(v); svg.appendChild(tx);
+  });
+  const step = pw/n, bw = Math.max(3, step - 2), r = Math.min(4, bw/2);
+  const cap = htmlEl("div", "kmCap");
+  const bars = [];
+  const show = i => {
+    bars.forEach((b, j) => b.classList.toggle("sel", j === i));
+    const v = o.vals[i];
+    cap.textContent = "Km " + (i+1) + ": " + o.fmt(v) + " " + o.unit + (o.flags[i] ? ", " + o.flags[i] : "");
+  };
+  o.vals.forEach((v, i) => {
+    if (!(v > 0)) return;
+    const x = L + i*step + (step - bw)/2, y = yOf(v), h = T + ph - y;
+    const rr = Math.min(r, h);
+    const d = "M" + x + " " + (T + ph) + "V" + (y + rr) + "Q" + x + " " + y + " " + (x + rr) + " " + y +
+              "H" + (x + bw - rr) + "Q" + (x + bw) + " " + y + " " + (x + bw) + " " + (y + rr) + "V" + (T + ph) + "Z";
+    const bar = svgEl("path", { d, class: "kbar" + (o.flags[i] ? " flag" : "") });
+    bars[i] = bar;
+    svg.appendChild(bar);
+    const hit = svgEl("rect", { x: L + i*step, y: T, width: step, height: ph + B, class: "hit" });
+    hit.addEventListener("click", () => show(i));
+    hit.addEventListener("mouseenter", () => show(i));
+    svg.appendChild(hit);
+  });
+  /* linha de referência (ritmo ou média do dia) */
+  const yr = yOf(o.ref);
+  svg.appendChild(svgEl("line", { x1: L, x2: W - Rr, y1: yr, y2: yr, class: "ref" }));
+  /* rótulos dos km: todos até 12, depois de 5 em 5 */
+  o.vals.forEach((v, i) => {
+    if (n > 12 && (i + 1) % 5 && i !== 0 && i !== n - 1) return;
+    const tx = svgEl("text", { x: L + i*step + step/2, y: H - 6, "text-anchor": "middle", class: "axis" });
+    tx.textContent = i + 1; svg.appendChild(tx);
+  });
+  const box = htmlEl("div", "kmBox");
+  const head = htmlEl("div", "kmHead");
+  head.appendChild(htmlEl("h4", "", o.title));
+  if (o.tag) head.appendChild(htmlEl("span", "flagTag", o.tag));
+  box.append(head, svg);
+  const leg = htmlEl("div", "kmLeg");
+  const k1 = htmlEl("span"); k1.appendChild(htmlEl("i", "sw ok")); k1.appendChild(document.createTextNode("km"));
+  const k2 = htmlEl("span"); k2.appendChild(htmlEl("i", "sw refl")); k2.appendChild(document.createTextNode(o.refName));
+  leg.append(k1, k2);
+  if (o.flags.some(Boolean)) { const k3 = htmlEl("span"); k3.appendChild(htmlEl("i", "sw bad")); k3.appendChild(document.createTextNode("fora do normal")); leg.appendChild(k3); }
+  box.append(leg, cap);
+  const first = o.flags.findIndex(Boolean);
+  show(first >= 0 ? first : 0);
+  return box;
+}
+
+function statTile(label, value, flag){
+  const t = htmlEl("div", "tile" + (flag ? " flag" : ""));
+  t.appendChild(htmlEl("div", "tv cond", value));
+  t.appendChild(htmlEl("div", "tl", label));
+  if (flag) t.appendChild(htmlEl("div", "tf", flag));
+  return t;
+}
+
+const det = document.getElementById("det");
+function openDetail(it){
+  const imp = it.imp, a = analyze(imp, /conversa|leve/i.test(baseText(it)));
+  const body = document.getElementById("detBody");
+  body.replaceChildren();
+  body.appendChild(htmlEl("div", "date", fmtDate(it.date)));
+  body.appendChild(htmlEl("h3", "", it.text.replace(" (semana leve)", "")));
+
+  const km = kmOf(it), sec = parseTime(it.time) || imp.moving;
+  const tiles = htmlEl("div", "tiles");
+  tiles.appendChild(statTile("km", fmtKm(km)));
+  tiles.appendChild(statTile("tempo", fmtDur(sec)));
+  if (km && sec) tiles.appendChild(statTile("por km", fmtDur(sec/km)));
+  if (imp.hr) tiles.appendChild(statTile("FC média", String(imp.hr), a.hrHigh ? "alta para treino leve" : ""));
+  if (imp.hrMax && imp.hrMax !== imp.hr) tiles.appendChild(statTile("FC máxima", String(imp.hrMax)));
+  if (imp.cad) tiles.appendChild(statTile("passos por min", String(imp.cad), a.cadLow ? "cadência baixa" : ""));
+  if (imp.kcal) tiles.appendChild(statTile("kcal", String(imp.kcal)));
+  if (imp.steps) tiles.appendChild(statTile("passos", imp.steps.toLocaleString("pt-BR")));
+  if (imp.up || imp.down) tiles.appendChild(statTile("subida (m)", String(imp.up)));
+  if (imp.elapsed - imp.moving > 60) tiles.appendChild(statTile("parado", fmtDur(imp.elapsed - imp.moving)));
+  body.appendChild(tiles);
+
+  if (a.pace) body.appendChild(kmBarChart({
+    title: "Ritmo por km", vals: imp.splits, ref: a.pace.ref, refName: "ritmo do dia", flags: a.pace.flags,
+    invert: true, minPad: 20, fmt: v => fmtDur(v), unit: "por km", tag: a.drop ? "ritmo caiu no final" : ""
+  }));
+  if (a.hr) body.appendChild(kmBarChart({
+    title: "Frequência por km", vals: imp.kmHr, ref: a.hr.ref, refName: "média", flags: a.hr.flags,
+    invert: false, minPad: 5, fmt: v => String(Math.round(v)), unit: "bpm",
+    tag: imp.hrPeak && imp.hrPeak.bpm >= imp.hr + 10 ? "pico de " + imp.hrPeak.bpm + " no km " + fmtKm(imp.hrPeak.km) : ""
+  }));
+  if (a.cad) body.appendChild(kmBarChart({
+    title: "Passos por min, por km", vals: imp.kmCad, ref: a.cad.ref, refName: "média", flags: a.cad.flags,
+    invert: false, minPad: 4, fmt: v => String(Math.round(v)), unit: "passos por min"
+  }));
+
+  const act = htmlEl("div", "actions");
+  const ed = htmlEl("button", "btn", "Editar"); ed.type = "button";
+  ed.addEventListener("click", () => { closeDetail(); openEditor(it); });
+  const cl = htmlEl("button", "btn solid", "Fechar"); cl.type = "button";
+  cl.addEventListener("click", closeDetail);
+  act.append(ed, cl);
+  body.appendChild(act);
+  if (typeof det.showModal === "function") det.showModal(); else det.setAttribute("open", "");
+}
+function closeDetail(){ if (typeof det.close === "function") det.close(); else det.removeAttribute("open"); }
+det.addEventListener("click", e => { if (e.target === det) closeDetail(); });
 
 /* ---------- armazenamento ---------- */
 function loadLocal(){
@@ -337,15 +682,16 @@ function allItems(){
       key: k, w: p.w, f: p.f, isPlan: true, isRace: p.o === 0,
       recText: p.t, recDate,
       text: e.text || p.t, date: e.date ? parseDate(e.date) : recDate,
-      km: e.km || null, time: e.time || "", note: e.note || "",
+      km: e.km || null, time: e.time || "", note: e.note || "", imp: e.imp || null,
       changed: !!(e.text || e.date)
     };
   });
   state.extras.forEach(x => {
+    const wp = PLAN.find(p => p.w === x.w);
     list.push({
-      key: x.id, w: x.w, isPlan: false, isRace: false, recText: "", recDate: null,
+      key: x.id, w: x.w, f: wp ? wp.f : "", isPlan: false, isRace: false, recText: "", recDate: null,
       text: x.text || "Treino extra", date: x.date ? parseDate(x.date) : today(),
-      km: x.km || null, time: x.time || "", note: x.note || "", changed: false
+      km: x.km || null, time: x.time || "", note: x.note || "", imp: x.imp || null, changed: false
     });
   });
   return list;
@@ -358,7 +704,7 @@ function weekBounds(w){
 
 /* ---------- gráfico polar ---------- */
 const SVGNS = "http://www.w3.org/2000/svg";
-const R0 = 40, R1 = 96, PUSH = 9;
+const R0 = 40, R1 = 90, RO0 = 93, RO1 = 99, PUSH = 8; /* RO: anel de fora que mostra o que passou de 100% */
 function svgEl(tag, attrs){ const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; }
 function htmlEl(tag, cls, text){ const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 function pt(r, a){ return (r*Math.sin(a)).toFixed(2) + " " + (-r*Math.cos(a)).toFixed(2); }
@@ -389,11 +735,12 @@ function makePolarChart(host, title, defs){
     const g = svgEl("g", { class: "slice", tabindex: "0", role: "button" });
     const bg = svgEl("path", { class: "bg", d: sectorPath(R0, R1, a0, a1), fill: "var(--" + d.color + "Soft)" });
     const fg = svgEl("path", { class: "fg", d: "", fill: "var(--" + d.color + ")" });
-    g.append(bg, fg);
+    const ov = svgEl("path", { class: "ov", d: "", fill: "var(--" + d.color + ")" });
+    g.append(bg, fg, ov);
     g.addEventListener("click", () => select(i));
     g.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(i); } });
     pz.appendChild(g);
-    return { g, fg, a0, a1, dx: PUSH*Math.sin(mid), dy: -PUSH*Math.cos(mid) };
+    return { g, fg, ov, a0, a1, dx: PUSH*Math.sin(mid), dy: -PUSH*Math.cos(mid) };
   });
   pz.appendChild(svgEl("circle", { class: "hole", r: R0 - 1 }));
   const cPct = svgEl("text", { class: "cPct", "text-anchor": "middle", y: "6" });
@@ -479,9 +826,12 @@ function makePolarChart(host, title, defs){
 
   /* vals: [{pct, value, rows}] na mesma ordem de defs */
   function update(vals){
-    data = vals.map(v => Object.assign({}, v, { pct: clamp01(v.pct) }));
+    data = vals.map(v => Object.assign({}, v, { pct: Math.max(0, v.pct || 0) }));
     slices.forEach((s, i) => {
-      s.fg.setAttribute("d", sectorPath(R0, R0 + (R1 - R0)*data[i].pct, s.a0, s.a1));
+      const p = data[i].pct;
+      s.fg.setAttribute("d", sectorPath(R0, R0 + (R1 - R0)*clamp01(p), s.a0, s.a1));
+      /* acima de 100%: arco de fora cresce no sentido horário, cheio em 200% */
+      s.ov.setAttribute("d", p > 1 ? sectorPath(RO0, RO1, s.a0, s.a0 + (s.a1 - s.a0)*clamp01(p - 1)) : "");
       s.g.setAttribute("aria-label", defs[i].name + ", " + pctText(data[i].pct) + ", " + data[i].value);
       legBtns[i].lp.textContent = pctText(data[i].pct);
     });
@@ -501,21 +851,25 @@ const PREP_GROUPS = [
 let calChart = null, prepChart = null;
 
 function ratio(a, b){ return b ? a/b : 0; }
-function countRows(goal, isDone){
-  return PHASES.map(ph => {
-    const g = goal.filter(it => phaseName(it.f) === ph);
-    const d = g.filter(isDone).length;
-    return { label: ph, right: d + " de " + g.length, pct: ratio(d, g.length) };
-  }).filter(r => r.right !== "0 de 0");
+/* meta = itens do plano. Feito = tudo que foi feito no grupo, inclusive opcionais e extras, e pode passar de 100% */
+function countRows(goal, doneList){
+  const rows = PHASES.map(ph => {
+    const g = goal.filter(it => phaseName(it.f) === ph).length;
+    const d = doneList.filter(it => it.isPlan && phaseName(it.f) === ph).length;
+    return { label: ph, right: d + " de " + g, pct: ratio(d, g), skip: !g && !d };
+  }).filter(r => !r.skip);
+  const ex = doneList.filter(it => !it.isPlan).length;
+  if (ex) rows.push({ label: "Treinos extras", right: "mais " + ex });
+  return rows;
 }
 
 function calendarValues(items){
   const isDone = it => !!state.done[it.key];
   const plan = items.filter(it => it.isPlan);
+  const doneAll = items.filter(isDone);
   const runGoal = plan.filter(it => isRunItem(it) && !isOptional(it));
-  const doneRuns = items.filter(it => isDone(it) && isRunItem(it));
+  const doneRuns = doneAll.filter(isRunItem);
 
-  /* km: meta só com corridas do plano sem opcionais, feito com todas as corridas feitas */
   const kmGoal = runGoal.reduce((s, it) => s + textKm(it.recText), 0);
   const kmDone = doneRuns.reduce((s, it) => s + kmOf(it), 0);
   const kmRows = PHASES.map(ph => {
@@ -523,22 +877,22 @@ function calendarValues(items){
     const d = doneRuns.filter(it => it.isPlan && phaseName(it.f) === ph).reduce((s, it) => s + kmOf(it), 0);
     return { label: ph, right: fmtKm(d) + " de " + fmtKm(g) + " km", pct: ratio(d, g) };
   });
-  const extraKm = doneRuns.filter(it => !it.isPlan).reduce((s, it) => s + kmOf(it), 0);
-  const extraCount = doneRuns.filter(it => !it.isPlan).length;
-  if (extraCount) kmRows.push({ label: "Treinos extras (" + extraCount + ")", right: fmtKm(extraKm) + " km" });
+  const extraRuns = doneRuns.filter(it => !it.isPlan);
+  if (extraRuns.length) kmRows.push({ label: "Treinos extras (" + extraRuns.length + ")", right: "mais " + fmtKm(extraRuns.reduce((s, it) => s + kmOf(it), 0)) + " km" });
 
-  const runsDone = runGoal.filter(isDone).length;
-  const longs = plan.filter(it => /^Longão/i.test(it.recText));
-  const longsDone = longs.filter(isDone).length;
-  const strength = plan.filter(it => /fortalecimento/i.test(it.recText));
-  const strDone = strength.filter(isDone).length;
+  const longs = plan.filter(isLong);
+  const longsDone = doneAll.filter(isLong);
+  const longRows = items.filter(it => isLong(it) && (it.isPlan || isDone(it))).sort((a, b) => a.date - b.date)
+    .map(it => ({ label: fmtDate(it.date) + ", " + fmtKm(it.isPlan ? textKm(it.recText) : kmOf(it)) + " km" + (it.isPlan ? "" : " (extra)"), status: isDone(it) }));
+
+  const strength = plan.filter(isStrength);
+  const strDone = doneAll.filter(isStrength);
 
   return [
     { pct: ratio(kmDone, kmGoal), value: fmtKm(kmDone) + " de " + fmtKm(kmGoal) + " km", rows: kmRows },
-    { pct: ratio(runsDone, runGoal.length), value: runsDone + " de " + runGoal.length + " corridas", rows: countRows(runGoal, isDone) },
-    { pct: ratio(longsDone, longs.length), value: longsDone + " de " + longs.length + " longões",
-      rows: longs.slice().sort((a, b) => a.date - b.date).map(it => ({ label: fmtDate(it.date) + ", " + fmtKm(textKm(it.recText)) + " km", status: isDone(it) })) },
-    { pct: ratio(strDone, strength.length), value: strDone + " de " + strength.length + " sessões", rows: countRows(strength, isDone) }
+    { pct: ratio(doneRuns.length, runGoal.length), value: doneRuns.length + " de " + runGoal.length + " corridas", rows: countRows(runGoal, doneRuns) },
+    { pct: ratio(longsDone.length, longs.length), value: longsDone.length + " de " + longs.length + " longões", rows: longRows },
+    { pct: ratio(strDone.length, strength.length), value: strDone.length + " de " + strength.length + " sessões", rows: countRows(strength, strDone) }
   ];
 }
 
@@ -577,10 +931,12 @@ function render(){
   const doneRuns = doneItems.filter(isRunItem);
   const totalKm = doneRuns.reduce((s,it) => s + kmOf(it), 0);
   const longest = doneRuns.reduce((m,it) => Math.max(m, kmOf(it)), 0);
-  document.getElementById("sDone").textContent = doneItems.length + "/" + items.length;
+  /* a meta é o plano, os extras feitos somam e podem passar de 100% */
+  const planCount = items.filter(it => it.isPlan).length;
+  document.getElementById("sDone").textContent = doneItems.length + "/" + planCount;
   document.getElementById("sKm").textContent = fmtKm(totalKm);
   document.getElementById("sLong").textContent = fmtKm(longest);
-  document.getElementById("fill").style.width = (items.length ? doneItems.length/items.length*100 : 0) + "%";
+  document.getElementById("fill").style.width = Math.min(100, planCount ? doneItems.length/planCount*100 : 0) + "%";
 
   const weeksEl = document.getElementById("weeks");
   weeksEl.innerHTML = "";
@@ -592,7 +948,8 @@ function render(){
     if (isCurrent) currentWeek = w;
     const light = PLAN.some(p => p.w === w && p.t.includes("semana leve"));
     const wd = wi.filter(it => state.done[it.key]).length;
-    const wkm = wi.filter(it => state.done[it.key]).reduce((s,it) => s + (it.km || 0), 0);
+    const wPlan = wi.filter(it => it.isPlan).length;
+    const wkm = wi.filter(it => state.done[it.key] && isRunItem(it)).reduce((s,it) => s + kmOf(it), 0);
 
     const sec = document.createElement("div");
     sec.className = "week" + (isCurrent ? " current" : "");
@@ -605,7 +962,7 @@ function render(){
     const ph = document.createElement("span"); ph.className = "phase"; ph.textContent = PLAN.find(p => p.w === w).f.replace(/^\d\.\s*/,"");
     left.append(h2, ph);
     const cnt = document.createElement("span"); cnt.className = "count";
-    cnt.textContent = wd + "/" + wi.length + (wkm ? ", " + fmtKm(wkm) + " km" : "");
+    cnt.textContent = wd + "/" + wPlan + (wkm ? ", " + fmtKm(wkm) + " km" : "");
     head.append(left, cnt);
     sec.appendChild(head);
 
@@ -650,10 +1007,12 @@ function itemRow(it, t){
     body.appendChild(r);
   }
   if (it.note) { const n = document.createElement("div"); n.className = "note"; n.textContent = it.note; body.appendChild(n); }
-  body.addEventListener("click", () => openEditor(it));
+  /* corrida importada abre os gráficos, o resto abre o editor */
+  const open = () => it.imp ? openDetail(it) : openEditor(it);
+  body.addEventListener("click", open);
 
-  const ed = document.createElement("span"); ed.className = "edit"; ed.textContent = "Editar"; ed.setAttribute("aria-hidden","true");
-  ed.addEventListener("click", () => openEditor(it));
+  const ed = document.createElement("span"); ed.className = "edit"; ed.textContent = it.imp ? "Gráficos" : "Editar"; ed.setAttribute("aria-hidden","true");
+  ed.addEventListener("click", open);
   row.append(cb, body, ed);
   return row;
 }
@@ -695,7 +1054,7 @@ let editing = null;
 
 function openEditor(it, week){
   if (it) {
-    editing = { key: it.key, isPlan: it.isPlan, w: it.w };
+    editing = { key: it.key, isPlan: it.isPlan, w: it.w, imp: it.imp || null };
     f("dTitle").textContent = it.isRace ? "A prova" : it.isPlan ? "Editar treino" : "Treino extra";
     f("dRec").hidden = !it.isPlan;
     if (it.isPlan) f("dRecText").textContent = it.recText.replace(" (semana leve)","") + ", " + fmtDate(it.recDate);
@@ -708,7 +1067,7 @@ function openEditor(it, week){
     f("dReset").hidden = !it.isPlan;
     f("dDelete").hidden = it.isPlan;
   } else {
-    editing = { key: null, isPlan: false, w: week };
+    editing = { key: null, isPlan: false, w: week, imp: null };
     const { monday, sunday } = weekBounds(week);
     const t = today();
     f("dTitle").textContent = "Novo treino na semana " + week;
@@ -720,6 +1079,7 @@ function openEditor(it, week){
     f("dReset").hidden = true; f("dDelete").hidden = true;
   }
   updatePace();
+  showImp();
   if (typeof dlg.showModal === "function") dlg.showModal(); else dlg.setAttribute("open","");
 }
 function closeEditor(){ if (typeof dlg.close === "function") dlg.close(); else dlg.removeAttribute("open"); editing = null; }
@@ -731,6 +1091,85 @@ function readKm(){
 function updatePace(){ f("fPace").textContent = paceText(readKm(), f("fTime").value) ? "Ritmo: " + paceText(readKm(), f("fTime").value) : ""; }
 f("fKm").addEventListener("input", () => { if (readKm()) f("fDone").checked = true; updatePace(); });
 f("fTime").addEventListener("input", updatePace);
+
+function showImp(){
+  const imp = editing && editing.imp;
+  f("fImpInfo").hidden = !imp;
+  if (imp) f("fImpText").textContent = "Dados do arquivo " + imp.src.toUpperCase() + " importados";
+}
+f("dImport").addEventListener("click", () => { f("fFile").value = ""; f("fFile").click(); });
+f("fFile").addEventListener("change", async () => {
+  const file = f("fFile").files[0];
+  if (!file || !editing) return;
+  try {
+    const a = parseActivity(await file.text());
+    f("fKm").value = String(a.km).replace(".", ",");
+    f("fTime").value = fmtDur(a.moving);
+    f("fDate").value = toISO(a.start);
+    f("fDone").checked = true;
+    editing.imp = a.imp;
+    updatePace(); showImp();
+  } catch(e){ alert("Não consegui ler " + file.name + ": " + e.message + "."); }
+});
+f("dImpClear").addEventListener("click", () => { if (editing) { editing.imp = null; showImp(); } });
+
+/* importa vários arquivos: usa o treino de corrida do mesmo dia ou cria um extra */
+function weekOf(day){
+  for (let w = 1; w <= 20; w++) { const b = weekBounds(w); if (day >= b.monday && day <= b.sunday) return w; }
+  return null;
+}
+function applyImport(a, name){
+  const day = new Date(a.start.getFullYear(), a.start.getMonth(), a.start.getDate());
+  const iso = toISO(day), label = fmtDate(day) + ", " + fmtKm(a.km) + " km";
+  const items = allItems();
+  /* mesma corrida de novo (por exemplo GPX e depois TCX): atualiza com os dados do arquivo novo */
+  const prev = items.find(it => it.imp && it.imp.start === a.imp.start);
+  if (prev) {
+    const merged = Object.assign({}, prev.imp, a.imp);
+    if (prev.isPlan) state.edits[prev.key] = Object.assign({}, state.edits[prev.key], { km: a.km, time: fmtDur(a.moving), imp: merged });
+    else { const x = state.extras.find(x => x.id === prev.key); if (x) Object.assign(x, { km: a.km, time: fmtDur(a.moving), imp: merged }); }
+    state.done[prev.key] = true;
+    return { ok: true, msg: label + ": já estava importado, dados atualizados" };
+  }
+  const w = weekOf(day);
+  if (!w) return { ok: false, msg: label + ": fora das 20 semanas do plano" };
+  const time = fmtDur(a.moving);
+  /* substitui um treino de corrida do plano na mesma semana que ainda não foi feito.
+     Preferência: mesmo dia, depois a distância recomendada mais parecida, depois a data mais próxima.
+     Treino marcado como feito à mão só é usado se for do mesmo dia. A prova só se for no dia dela. */
+  const cands = items.filter(it => it.isPlan && it.w === w && isRunItem(it) && !it.imp &&
+      (!state.done[it.key] || toISO(it.date) === iso) && (!it.isRace || toISO(it.date) === iso))
+    .map(it => ({ it, same: toISO(it.date) === iso ? 0 : 1, dk: Math.abs(textKm(it.recText) - a.km), dd: Math.abs(it.date - day) }))
+    .sort((x, y) => x.same - y.same || x.dk - y.dk || x.dd - y.dd);
+  if (cands.length) {
+    const it = cands[0].it;
+    const e = Object.assign({}, state.edits[it.key], { km: a.km, time, imp: a.imp });
+    if (iso !== toISO(it.recDate)) e.date = iso; else delete e.date;
+    state.edits[it.key] = e;
+    state.done[it.key] = true;
+    return { ok: true, msg: label + ": registrado como " + it.recText.replace(" (semana leve)", "") + (cands[0].same ? " (data ajustada)" : "") };
+  }
+  let n = Date.now(), id = "x" + n;
+  while (state.extras.some(x => x.id === id)) id = "x" + (++n);
+  state.extras.push({ id, w, text: "Corrida importada", date: iso, km: a.km, time, note: "", imp: a.imp });
+  state.done[id] = true;
+  return { ok: true, msg: label + ": adicionado como treino extra na semana " + w };
+}
+f("impMany").addEventListener("click", () => { f("impManyFile").value = ""; f("impManyFile").click(); });
+f("impManyFile").addEventListener("change", async () => {
+  const files = Array.from(f("impManyFile").files || []);
+  if (!files.length) return;
+  const msgs = [];
+  let changed = false;
+  for (const file of files) {
+    try {
+      const r = applyImport(parseActivity(await file.text()), file.name);
+      msgs.push(r.msg); if (r.ok) changed = true;
+    } catch(e){ msgs.push(file.name + ": " + e.message); }
+  }
+  if (changed) save();
+  alert(msgs.join("\n"));
+});
 
 f("dSave").addEventListener("click", () => {
   if (!editing) return;
@@ -749,13 +1188,16 @@ f("dSave").addEventListener("click", () => {
     if (km) e.km = km;
     if (time) e.time = time;
     if (note) e.note = note;
+    if (editing.imp) e.imp = editing.imp;
     if (Object.keys(e).length) state.edits[editing.key] = e; else delete state.edits[editing.key];
   } else if (editing.key) {
     const x = state.extras.find(x => x.id === editing.key);
-    if (x) Object.assign(x, { text: text || "Treino extra", date, km, time, note });
+    if (x) { Object.assign(x, { text: text || "Treino extra", date, km, time, note }); if (editing.imp) x.imp = editing.imp; else delete x.imp; }
   } else {
     const id = "x" + Date.now();
-    state.extras.push({ id, w: editing.w, text: text || "Treino extra", date, km, time, note });
+    const nx = { id, w: editing.w, text: text || "Treino extra", date, km, time, note };
+    if (editing.imp) nx.imp = editing.imp;
+    state.extras.push(nx);
     editing.key = id;
   }
   if (f("fDone").checked) state.done[editing.key] = true; else delete state.done[editing.key];
